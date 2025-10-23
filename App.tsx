@@ -44,7 +44,7 @@ const LoadingDisplay = () => {
 }
 
 function App() {
-  const [prompt, setPrompt] = useState<string>('How to ');
+  const [query, setQuery] = useState<string>('');
   const [answer, setAnswer] = useState<string>('');
   const [sources, setSources] = useState<Source[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -52,15 +52,16 @@ function App() {
 
   const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!prompt.trim() || isLoading) return;
+    if (!query.trim() || isLoading) return;
 
+    const fullPrompt = `How to ${query}`;
     setIsLoading(true);
     setError(null);
     setAnswer('');
     setSources([]);
 
     try {
-      const result = await getHowToAnswer(prompt);
+      const result = await getHowToAnswer(fullPrompt);
       setAnswer(result.answer);
       setSources(result.sources);
     } catch (err) {
@@ -103,10 +104,10 @@ function App() {
       </header>
 
       <main className="w-full flex-grow flex flex-col items-center px-4">
-        <div className="w-full sticky top-4 z-10 bg-slate-900/80 backdrop-blur-md py-4">
+        <div className="w-full sticky top-0 z-10 bg-slate-900/80 backdrop-blur-md py-2 border-b border-slate-800 shadow-md transition-all duration-300">
           <SearchInput
-            prompt={prompt}
-            onPromptChange={setPrompt}
+            query={query}
+            onQueryChange={setQuery}
             onSubmit={handleSearch}
             isLoading={isLoading}
           />

@@ -1,13 +1,13 @@
 import React from 'react';
 
 interface SearchInputProps {
-  prompt: string;
-  onPromptChange: (value: string) => void;
+  query: string;
+  onQueryChange: (value: string) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   isLoading: boolean;
 }
 
-const SearchInput: React.FC<SearchInputProps> = ({ prompt, onPromptChange, onSubmit, isLoading }) => {
+const SearchInput: React.FC<SearchInputProps> = ({ query, onQueryChange, onSubmit, isLoading }) => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault(); // Prevent new line
@@ -21,24 +21,28 @@ const SearchInput: React.FC<SearchInputProps> = ({ prompt, onPromptChange, onSub
   return (
     <form onSubmit={onSubmit} className="w-full max-w-2xl mx-auto">
       <div className="relative">
-        <textarea
-          value={prompt}
-          onChange={(e) => onPromptChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="How to..."
-          className="w-full p-4 pr-24 rounded-full bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-300 resize-none overflow-y-hidden"
-          rows={1}
-          onInput={(e) => {
-            const target = e.target as HTMLTextAreaElement;
-            target.style.height = 'auto';
-            target.style.height = `${target.scrollHeight}px`;
-          }}
-          disabled={isLoading}
-        />
+        <div className="w-full flex items-baseline p-4 pr-24 rounded-full bg-slate-800 border border-slate-700 text-white focus-within:outline-none focus-within:ring-2 focus-within:ring-cyan-500 transition-all duration-300">
+            <span className="text-slate-100 select-none whitespace-nowrap">How to&nbsp;</span>
+            <textarea
+                value={query}
+                onChange={(e) => onQueryChange(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="bake a cake from scratch"
+                className="w-full bg-transparent focus:outline-none resize-none overflow-y-hidden placeholder:text-slate-500"
+                rows={1}
+                onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = 'auto';
+                    target.style.height = `${target.scrollHeight}px`;
+                }}
+                disabled={isLoading}
+                autoFocus
+            />
+        </div>
         <button
           type="submit"
-          disabled={isLoading}
-          className="absolute right-2 top-1/2 -translate-y-1/2 h-12 px-6 rounded-full bg-cyan-600 text-white font-semibold hover:bg-cyan-500 disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center transition-colors duration-300"
+          disabled={isLoading || !query.trim()}
+          className="absolute right-2 top-1/2 -translate-y-1/2 h-12 px-6 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold hover:from-cyan-400 hover:to-blue-500 disabled:bg-gradient-none disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-300"
         >
           {isLoading ? (
             <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
