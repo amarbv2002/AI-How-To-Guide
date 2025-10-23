@@ -1,0 +1,5 @@
+{
+  "name": "AI How-To Guide",
+  "description": "An application that uses AI and web search to answer any 'how to' question. Users can input a query and receive a comprehensive answer along with the web sources used to generate it.",
+  "requestFramePermissions": []
+}
