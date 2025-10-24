@@ -134,8 +134,7 @@ function App() {
       
       <footer className="w-full text-center p-4 mt-12 text-slate-500 text-sm space-y-2">
         <p>
-          Made with ❤️ by <a href="https://amarkarthik.in" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">Amar Karthik</a>. A product of <a href="https://www.unikbrushes.com" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">UnikBrushes</a>
-        </p>
+          Made with ❤️ by <a href="https://amarkarthik.in" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">Amar Karthik</a></p>
         <p>&copy; {new Date().getFullYear()} AI How-To Guide. All Rights Reserved.</p>
         <p>Powered by Google Gemini</p>
       </footer>

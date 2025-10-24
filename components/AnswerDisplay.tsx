@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Source } from '../types';
 
@@ -15,69 +14,177 @@ const AnswerDisplay: React.FC<AnswerDisplayProps> = ({ answer, sources, onClear 
    * Supports:
    * - Headings (##, ###)
    * - Unordered lists (*)
+   * - Ordered lists (1.)
    * - Bold text (**)
+   * - Italic text (* or _)
+   * - Inline code (`)
+   * - Fenced code blocks (```)
    * - Paragraphs
    */
   const parseMarkdownToJsx = (markdown: string): React.ReactNode[] => {
     const lines = markdown.split('\n');
     const elements: React.ReactNode[] = [];
     let listItems: string[] = [];
+    let orderedListItems: string[] = [];
+    let inCodeBlock = false;
+    let codeBlockContent: string[] = [];
+    let codeBlockLang = '';
 
-    // Parses inline elements like bold text
+    // Parses inline elements like bold, italics, and inline code.
     const parseInline = (text: string): React.ReactNode => {
-      const parts = text.split(/\*\*(.*?)\*\*/g);
-      return parts.map((part, index) => {
-        if (index % 2 === 1) { // Bold text
-          return <strong key={index} className="font-semibold text-slate-100">{part}</strong>;
+      const elements: React.ReactNode[] = [];
+      const regex = /(\*\*(.*?)\*\*)|(_(.*?)_)|(\*(.*?)\*)|(`(.*?)`)/g;
+      let lastIndex = 0;
+      let match;
+
+      while ((match = regex.exec(text)) !== null) {
+        // Push text before the match
+        if (match.index > lastIndex) {
+          elements.push(text.substring(lastIndex, match.index));
         }
-        return part;
-      });
+
+        const [, , boldContent, , italicContentUnder, , italicContentStar, , codeContent] = match;
+        
+        const key = `${lastIndex}-${match.index}`;
+
+        if (boldContent !== undefined) {
+          elements.push(<strong key={key} className="font-semibold text-slate-100">{boldContent}</strong>);
+        } else if (italicContentUnder !== undefined) {
+          elements.push(<em key={key} className="italic text-slate-200">{italicContentUnder}</em>);
+        } else if (italicContentStar !== undefined) {
+          elements.push(<em key={key} className="italic text-slate-200">{italicContentStar}</em>);
+        } else if (codeContent !== undefined) {
+          elements.push(<code key={key} className="bg-slate-700 text-cyan-300 rounded px-1.5 py-0.5 font-mono text-sm">{codeContent}</code>);
+        }
+
+        lastIndex = regex.lastIndex;
+      }
+
+      // Push remaining text after last match
+      if (lastIndex < text.length) {
+        elements.push(text.substring(lastIndex));
+      }
+      
+      return elements.length > 1 ? React.createElement(React.Fragment, {}, ...elements) : (elements[0] || '');
     };
 
-    // Pushes any accumulated list items to the elements array as a <ul>
-    const flushList = (key: string) => {
+    // Pushes any accumulated unordered list items to the elements array as a <ul>
+    const flushUnorderedList = (key: string) => {
       if (listItems.length > 0) {
         elements.push(
           <ul key={key} className="list-disc list-inside space-y-2 my-4 pl-4">
             {listItems.map((item, index) => (
-              <li key={index} className="text-slate-300">{parseInline(item)}</li>
+              <li key={`${key}-li-${index}`} className="text-slate-300">{parseInline(item)}</li>
             ))}
           </ul>
         );
         listItems = [];
       }
     };
+    
+    // Pushes any accumulated ordered list items to the elements array as a <ol>
+    const flushOrderedList = (key: string) => {
+        if (orderedListItems.length > 0) {
+          elements.push(
+            <ol key={key} className="list-decimal list-inside space-y-2 my-4 pl-4">
+              {orderedListItems.map((item, index) => (
+                <li key={`${key}-li-${index}`} className="text-slate-300">{parseInline(item)}</li>
+              ))}
+            </ol>
+          );
+          orderedListItems = [];
+        }
+    };
+
+    // Pushes any accumulated code lines to the elements array as a <pre><code> block
+    const flushCodeBlock = (key: string) => {
+      if (codeBlockContent.length > 0) {
+        elements.push(
+          <div key={key} className="bg-slate-900/70 rounded-lg my-4 border border-slate-700">
+            {codeBlockLang && (
+              <div className="text-xs text-slate-400 px-4 py-2 border-b border-slate-700 font-mono uppercase tracking-wider">
+                {codeBlockLang}
+              </div>
+            )}
+            <pre className="p-4 overflow-x-auto">
+              <code className="text-slate-300 font-mono text-sm whitespace-pre">
+                {codeBlockContent.join('\n')}
+              </code>
+            </pre>
+          </div>
+        );
+        codeBlockContent = [];
+        codeBlockLang = '';
+      }
+    };
 
     lines.forEach((line, index) => {
+      const lineKey = `line-${index}`;
+      const trimmedLine = line.trim();
+      
+      // Handle code blocks
+      if (trimmedLine.startsWith('```')) {
+        if (inCodeBlock) {
+          // End of code block
+          flushCodeBlock(`code-${index}`);
+          inCodeBlock = false;
+        } else {
+          // Start of code block
+          flushUnorderedList(`ul-${index}`);
+          flushOrderedList(`ol-${index}`);
+          inCodeBlock = true;
+          codeBlockLang = trimmedLine.substring(3).trim();
+        }
+        return;
+      }
+
+      if (inCodeBlock) {
+        codeBlockContent.push(line);
+        return;
+      }
+
       // Heading 3
-      if (line.startsWith('### ')) {
-        flushList(`ul-${index}`);
-        elements.push(<h3 key={index} className="text-xl font-bold text-slate-100 mt-6 mb-3">{parseInline(line.substring(4))}</h3>);
+      if (trimmedLine.startsWith('### ')) {
+        flushUnorderedList(`ul-${index}`);
+        flushOrderedList(`ol-${index}`);
+        elements.push(<h3 key={lineKey} className="text-xl font-bold text-slate-100 mt-6 mb-3">{parseInline(trimmedLine.substring(4))}</h3>);
         return;
       }
       // Heading 2
-      if (line.startsWith('## ')) {
-        flushList(`ul-${index}`);
-        elements.push(<h2 key={index} className="text-2xl font-bold text-slate-100 mt-8 mb-4">{parseInline(line.substring(3))}</h2>);
+      if (trimmedLine.startsWith('## ')) {
+        flushUnorderedList(`ul-${index}`);
+        flushOrderedList(`ol-${index}`);
+        elements.push(<h2 key={lineKey} className="text-2xl font-bold text-slate-100 mt-8 mb-4">{parseInline(trimmedLine.substring(3))}</h2>);
         return;
       }
-      // List item
-      if (line.startsWith('* ')) {
-        listItems.push(line.substring(2));
+      // Unordered list item
+      if (trimmedLine.startsWith('* ')) {
+        flushOrderedList(`ol-${index}`); // flush other list type
+        listItems.push(trimmedLine.substring(2));
+        return;
+      }
+      // Ordered list item
+      const orderedMatch = trimmedLine.match(/^(\d+)\. (.*)/);
+      if (orderedMatch) {
+        flushUnorderedList(`ul-${index}`); // flush other list type
+        orderedListItems.push(orderedMatch[2]);
         return;
       }
 
-      // If we encounter a non-list item, flush the current list
-      flushList(`ul-${index}`);
+      // If we encounter a non-list item, flush the current lists
+      flushUnorderedList(`ul-${index}`);
+      flushOrderedList(`ol-${index}`);
 
       // Paragraph
-      if (line.trim() !== '') {
-        elements.push(<p key={index} className="mb-4 text-slate-300">{parseInline(line)}</p>);
+      if (trimmedLine !== '') {
+        elements.push(<p key={lineKey} className="mb-4 text-slate-300">{parseInline(line)}</p>);
       }
     });
 
-    // Flush any remaining list items at the end of the text
-    flushList('ul-end');
+    // Flush any remaining list or code items at the end of the text
+    flushUnorderedList('ul-end');
+    flushOrderedList('ol-end');
+    flushCodeBlock('code-end');
 
     return elements;
   };
