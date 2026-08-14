@@ -1,17 +1,31 @@
-
 export interface Source {
   uri: string;
   title: string;
+  domain: string;
 }
 
-// This represents the structure of the grounding metadata from the Gemini API
-interface WebSource {
-  uri: string;
-  title: string;
+export interface HowToResponse {
+  answer: string;
+  sources: Source[];
+  searchQueries?: string[];
+  model?: string;
 }
 
-interface GroundingChunk {
-  web: WebSource;
+export interface HistoryItem {
+  id: string;
+  query: string;
+  timestamp: number;
+  category?: string;
+  sourcesCount: number;
+  previewText?: string;
+  favorite?: boolean;
 }
 
-export type GroundingMetadata = GroundingChunk[];
+export type Category = 
+  | 'All'
+  | 'Technology & Coding'
+  | 'DIY & Home'
+  | 'Culinary & Cooking'
+  | 'Career & Productivity'
+  | 'Creative & Design'
+  | 'Health & Fitness';

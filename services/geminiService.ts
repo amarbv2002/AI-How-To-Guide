@@ -1,48 +1,48 @@
+import { HowToResponse } from '../types';
 
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { GroundingMetadata, Source } from '../types';
+export async function getHowToAnswer(
+  prompt: string,
+  category?: string
+): Promise<HowToResponse> {
+  const response = await fetch('/api/how-to', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      prompt,
+      category: category && category !== 'All' ? category : undefined,
+    }),
+  });
 
-if (!process.env.API_KEY) {
-  throw new Error("API_KEY environment variable not set");
-}
+  const data = await response.json().catch(() => ({ error: 'Failed to parse response from server' }));
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-interface HowToResult {
-  answer: string;
-  sources: Source[];
-}
-
-export async function getHowToAnswer(prompt: string): Promise<HowToResult> {
-  try {
-    const response: GenerateContentResponse = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        tools: [{ googleSearch: {} }],
-      },
-    });
-
-    const answer = response.text;
-
-    const groundingMetadata: GroundingMetadata | undefined = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-
-    const sources: Source[] = groundingMetadata
-      ? groundingMetadata.map(chunk => ({
-          uri: chunk.web.uri,
-          title: chunk.web.title,
-        })).filter(source => source.uri && source.title)
-      : [];
-      
-    // Deduplicate sources based on URI
-    const uniqueSources = Array.from(new Map(sources.map(item => [item.uri, item])).values());
-
-    return { answer, sources: uniqueSources };
-  } catch (error) {
-    console.error("Error fetching 'how to' answer:", error);
-    if (error instanceof Error) {
-        throw new Error(`Failed to get answer from AI: ${error.message}`);
+  if (!response.ok) {
+    let errorMsg = 'Failed to generate how-to instructions.';
+    if (typeof data.error === 'string') {
+      try {
+        const parsed = JSON.parse(data.error);
+        if (parsed.error?.message) {
+          errorMsg = parsed.error.message;
+        } else {
+          errorMsg = data.error;
+        }
+      } catch {
+        errorMsg = data.error;
+      }
+    } else if (data.error && typeof data.error === 'object') {
+      errorMsg = data.error.message || JSON.stringify(data.error);
+    } else if (response.status === 429) {
+      errorMsg = 'Gemini API rate limit or quota exceeded. Please wait a moment and retry.';
     }
-    throw new Error("An unknown error occurred while fetching the answer.");
+
+    throw new Error(errorMsg);
   }
+
+  return {
+    answer: data.answer,
+    sources: data.sources || [],
+    searchQueries: data.searchQueries || [],
+    model: data.model || 'gemini-3.7-flash',
+  };
 }
